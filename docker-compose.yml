@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+
+  hivemq:
+    image: hivemq/hivemq4
+    ports:
+      - "1883:1883" # TCP
+      - "8000:8000" # Websocket extension
+      - "8080:8080" # Admin UI
