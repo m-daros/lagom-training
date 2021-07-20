@@ -10,7 +10,7 @@ val macwire = "com.softwaremill.macwire" %% "macros" % "2.3.3" % "provided"
 val scalaTest = "org.scalatest" %% "scalatest" % "3.1.1" % Test
 
 lazy val `lagom-training` = ( project in file ( "." ) )
-  .aggregate ( `lagom-training-api`, `lagom-training-impl`, `lagom-training-stream-api`, `lagom-training-stream-impl`, `data-model`, `devices-metrics-simulator` )
+  .aggregate ( `lagom-training-api`, `lagom-training-impl`, `lagom-training-stream-api`, `lagom-training-stream-impl`, `mqtt-kafka-bridge`, `data-model`, `devices-metrics-simulator` )
 
 lazy val `lagom-training-api` = ( project in file ( "service1/lagom-training-api" ) )
   .settings (
@@ -51,8 +51,16 @@ lazy val `lagom-training-stream-impl` = ( project in file ( "service2/lagom-trai
   )
   .dependsOn ( `lagom-training-stream-api`, `lagom-training-api` )
 
+
+lazy val `mqtt-kafka-bridge` = ( project in file ( "mqtt-kafka-bridge" ) )
+  .settings ( libraryDependencies ++=  Seq (
+    "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "3.0.2",
+    "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
+    scalaTest
+  ) )
+
 lazy val `data-model` = ( project in file ( "data-model" ) )
-  .settings ( libraryDependencies ++=  Seq () )
+  .settings ( libraryDependencies ++=  Seq ( scalaTest ) )
 
 lazy val `devices-metrics-simulator` = ( project in file ( "devices-metrics-simulator" ) )
   .dependsOn ( `data-model` )
@@ -63,5 +71,6 @@ lazy val `devices-metrics-simulator` = ( project in file ( "devices-metrics-simu
     "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % "2.12.4",
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % "2.12.4",
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.12.4",
-    "mdaros.training.lagom" %% "data-model" % "1.0-SNAPSHOT"
+    "mdaros.training.lagom" %% "data-model" % "1.0-SNAPSHOT",
+    scalaTest
   ) )
