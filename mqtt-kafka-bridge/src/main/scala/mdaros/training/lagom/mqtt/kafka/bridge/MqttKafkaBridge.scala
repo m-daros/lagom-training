@@ -20,8 +20,13 @@ object MqttKafkaBridge extends App {
   implicit val actorSystem = ActorSystem ( "mqtt-kafka-beidge" )
   implicit val executionContext = ExecutionContext.Implicits.global
 
-  val mqttConfig  = ConfigFactory.load ( "application.conf" ).getConfig ( "mqtt-kafka-bridge" )
-  val kafkaConfig = ConfigFactory.load ( "application.conf" ).getConfig ( "akka.kafka.producer" )
+  val mqttConfig  = ConfigFactory.load ( "application.conf" )
+    .getConfig ( "mqtt-kafka-bridge" )
+    .getConfig ( "mqtt-source" )
+
+  val kafkaConfig = ConfigFactory.load ( "application.conf" )
+    .getConfig ( "mqtt-kafka-bridge" )
+    .getConfig ( "kafka-sink" )
 
   val mqttTopic    = mqttConfig.getString ( MQTT_TOPIC.key )
   val mqttHost     = mqttConfig.getString ( MQTT_BROKER_HOST.key )
