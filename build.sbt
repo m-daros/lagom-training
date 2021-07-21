@@ -5,6 +5,7 @@ version in ThisBuild := "1.0-SNAPSHOT"
 scalaVersion in ThisBuild := "2.13.0"
 
 val AkkaVersion = "2.6.14"
+val JacksonVersion = "2.12.4"
 
 val macwire = "com.softwaremill.macwire" %% "macros" % "2.3.3" % "provided"
 val scalaTest = "org.scalatest" %% "scalatest" % "3.1.1" % Test
@@ -55,7 +56,9 @@ lazy val `lagom-training-stream-impl` = ( project in file ( "service2/lagom-trai
 lazy val `mqtt-kafka-bridge` = ( project in file ( "mqtt-kafka-bridge" ) )
   .settings ( libraryDependencies ++=  Seq (
     "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "3.0.2",
+    "com.typesafe.akka" %% "akka-stream-kafka" % "2.1.0",
     "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
+    "com.fasterxml.jackson.core" % "jackson-databind" % JacksonVersion,
     scalaTest
   ) )
 
@@ -67,10 +70,10 @@ lazy val `devices-metrics-simulator` = ( project in file ( "devices-metrics-simu
   .settings ( libraryDependencies ++=  Seq (
     "com.lightbend.akka" %% "akka-stream-alpakka-mqtt" % "3.0.2",
     "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
-    "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.12.4",
-    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % "2.12.4",
-    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % "2.12.4",
-    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.12.4",
+    "com.fasterxml.jackson.module" %% "jackson-module-scala" % JacksonVersion,
+    "com.fasterxml.jackson.module" % "jackson-module-parameter-names" % JacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % JacksonVersion,
+    "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % JacksonVersion,
     "mdaros.training.lagom" %% "data-model" % "1.0-SNAPSHOT",
     scalaTest
   ) )

@@ -2,11 +2,15 @@ package mdaros.training.lagom.mqtt.kafka.bridge
 
 import akka.Done
 import akka.actor.ActorSystem
+import akka.kafka.ProducerSettings
+import akka.kafka.scaladsl.Producer
 import akka.stream.alpakka.mqtt.scaladsl.MqttSource
 import akka.stream.alpakka.mqtt.{ MqttConnectionSettings, MqttMessage, MqttQoS, MqttSubscriptions }
 import akka.stream.scaladsl.{ Keep, Sink, Source }
 import com.typesafe.config.ConfigFactory
-import mdaros.training.lagom.mqtt.kafka.bridge.config.ConfigurationKeys.{ CLIENT_ID, MQTT_BROKER_HOST, MQTT_BROKER_PORT, TOPIC }
+import mdaros.training.lagom.mqtt.kafka.bridge.config.ConfigurationKeys.{ MQTT_CLIENT_ID, KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC, MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_TOPIC }
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.serialization.StringSerializer
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -16,27 +20,35 @@ object MqttKafkaBridge extends App {
   implicit val actorSystem = ActorSystem ( "mqtt-kafka-beidge" )
   implicit val executionContext = ExecutionContext.Implicits.global
 
-  val config = ConfigFactory.load ( "application.conf" ).getConfig ( "mqtt-kafka-bridge" )
+  val mqttConfig  = ConfigFactory.load ( "application.conf" ).getConfig ( "mqtt-kafka-bridge" )
+  val kafkaConfig = ConfigFactory.load ( "application.conf" ).getConfig ( "akka.kafka.producer" )
 
-  val topic    = config.getString ( TOPIC.key )
-  val mqttHost = config.getString ( MQTT_BROKER_HOST.key )
-  val mqttPort = config.getInt ( MQTT_BROKER_PORT.key )
-  val clientId = config.getString ( CLIENT_ID.key )
+  val mqttTopic    = mqttConfig.getString ( MQTT_TOPIC.key )
+  val mqttHost     = mqttConfig.getString ( MQTT_BROKER_HOST.key )
+  val mqttPort     = mqttConfig.getInt ( MQTT_BROKER_PORT.key )
+  val mqttClientId = mqttConfig.getString ( MQTT_CLIENT_ID.key )
+
+  val kafkaProducerSettings = ProducerSettings ( kafkaConfig, new StringSerializer, new StringSerializer )
+      .withBootstrapServers ( kafkaConfig.getString ( KAFKA_BOOTSTRAP_SERVERS.key ) )
 
   // TODO automaticReconnect = true
-  val connectionSettings = MqttConnectionSettings ( s"tcp://${ mqttHost }:${ mqttPort }", clientId, new MemoryPersistence )
+  val mqttConnectionSettings = MqttConnectionSettings ( s"tcp://${ mqttHost }:${ mqttPort }", mqttClientId, new MemoryPersistence )
 
   val mqttSource: Source [ MqttMessage, Future [ Done ] ] =
     MqttSource.atMostOnce (
-      connectionSettings.withClientId ( clientId ),
-      MqttSubscriptions ( Map ( topic -> MqttQoS.AtLeastOnce ) ),
+      mqttConnectionSettings.withClientId ( mqttClientId ),
+      MqttSubscriptions ( Map ( mqttTopic -> MqttQoS.AtLeastOnce ) ),
       bufferSize = 8
     )
 
-  // TODO Publish message to a Kafka topic
-  val kafkaSink: Sink [MqttMessage, Future [Done] ] = Sink.foreach ( message => println ( s"RECEIVED ${message}" ) )
+  // Publish messages to a Kafka topic
+  val kafkaSink = Producer.plainSink ( kafkaProducerSettings )
 
-  val ( subscribed, streamResult ) = mqttSource
-    .toMat ( kafkaSink ) ( Keep.both )
-    .run ()
+  val kafdkaTopic = kafkaConfig.getString ( KAFKA_TOPIC.key )
+
+  // Start the flow
+  mqttSource
+    .map ( mqttMessage => mqttMessage.payload.utf8String )
+    .map ( value => new ProducerRecord [ String, String ] ( kafdkaTopic, value ) )
+    .runWith ( kafkaSink )
 }
