@@ -59,6 +59,7 @@ lazy val `mqtt-kafka-bridge` = ( project in file ( "mqtt-kafka-bridge" ) )
     "com.typesafe.akka" %% "akka-stream-kafka" % "2.1.0",
     "com.typesafe.akka" %% "akka-stream" % AkkaVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % JacksonVersion,
+    macwire,
     scalaTest
   ) )
 
@@ -75,5 +76,6 @@ lazy val `devices-metrics-simulator` = ( project in file ( "devices-metrics-simu
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jdk8" % JacksonVersion,
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % JacksonVersion,
     "mdaros.training.lagom" %% "data-model" % "1.0-SNAPSHOT",
+    macwire,
     scalaTest
   ) )
