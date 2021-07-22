@@ -19,6 +19,9 @@ object MqttKafkaBridge extends App {
   implicit val actorSystem = ActorSystem ( SERVICE_NAME )
   implicit val executionContext = ExecutionContext.Implicits.global
 
+  val mqttSourceBuilder = wire [ MqttSourceBuilder ]
+  val kafkaSinkBuilder  = wire [ KafkaSinkBuilder ]
+
   val logger = Logging ( actorSystem, getClass )
 
   val mqttConfig  = ConfigFactory.load ( CONFIG_FILE_NAME )
@@ -28,9 +31,6 @@ object MqttKafkaBridge extends App {
   val kafkaConfig = ConfigFactory.load ( CONFIG_FILE_NAME )
     .getConfig ( SERVICE_NAME )
     .getConfig ( "kafka-sink" )
-
-  val mqttSourceBuilder = wire [MqttSourceBuilder]
-  val kafkaSinkBuilder  = wire [KafkaSinkBuilder]
 
   val mqttSource = mqttSourceBuilder.buildSource ( mqttConfig )
   val kafkaSink = kafkaSinkBuilder.buildSink ( kafkaConfig )

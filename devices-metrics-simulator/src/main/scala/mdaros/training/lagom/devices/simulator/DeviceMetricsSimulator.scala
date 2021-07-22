@@ -23,6 +23,8 @@ object DeviceMetricsSimulator extends App {
   implicit val actorSystem = ActorSystem ( "devices-metrics-simulator" )
   implicit val executionContext = ExecutionContext.Implicits.global
 
+  val mqttSinkBuilder = wire [ MqttSinkBuilder ]
+
   val logger = Logging ( actorSystem, getClass )
 
   val config = ConfigFactory.load ( "application.conf" )
@@ -51,7 +53,6 @@ object DeviceMetricsSimulator extends App {
                                 Measure ( clientId, "disk.usage", timestamp, randomGenerator.nextDouble () * 100 ) ) )
       .map ( measure => MqttMessage ( topic, ByteString ( jsonMapper.writer ().writeValueAsString ( measure ) ) ) )
 
-    val mqttSinkBuilder = wire [ MqttSinkBuilder ]
     val mqttSink = mqttSinkBuilder.buildMqttSink ( config, index )
 
     // Run the flow
