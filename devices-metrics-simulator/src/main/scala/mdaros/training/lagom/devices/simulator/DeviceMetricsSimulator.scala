@@ -20,46 +20,51 @@ import scala.language.postfixOps
 
 object DeviceMetricsSimulator extends App {
 
-  implicit val actorSystem = ActorSystem ( "devices-metrics-simulator" )
-  implicit val executionContext = ExecutionContext.Implicits.global
+  run ()
 
-  val mqttSinkBuilder = wire [ MqttSinkBuilder ]
+  def run (): Unit = {
 
-  val logger = Logging ( actorSystem, getClass )
+    implicit val actorSystem = ActorSystem ( "devices-metrics-simulator" )
+    implicit val executionContext = ExecutionContext.Implicits.global
 
-  val config = ConfigFactory.load ( "application.conf" )
-    .getConfig ( "devices-metrics-simulator" )
+    val mqttSinkBuilder = wire [ MqttSinkBuilder ]
 
-  val topic          = config.getString ( TOPIC.key )
-  val numeDevices    = config.getInt ( DEVICES_COUNT.key )
-  val clientIdPrefix = config.getString ( CLIENT_ID_PREFIX.key )
+    val logger = Logging ( actorSystem, getClass )
 
-  val jsonMapper = JsonMapper.builder ()
-    .addModule ( DefaultScalaModule )
-    .build ()
+    val config = ConfigFactory.load ( "application.conf" )
+      .getConfig ( "devices-metrics-simulator" )
 
-  val randomGenerator = new scala.util.Random
+    val topic          = config.getString ( TOPIC.key )
+    val numeDevices    = config.getInt ( DEVICES_COUNT.key )
+    val clientIdPrefix = config.getString ( CLIENT_ID_PREFIX.key )
 
-  val devices = 1 to numeDevices
+    val jsonMapper = JsonMapper.builder ()
+      .addModule ( DefaultScalaModule )
+      .build ()
 
-  // Generate random measures for every simulated device
-  devices.foreach ( index => {
+    val randomGenerator = new scala.util.Random
 
-    val clientId = s"${clientIdPrefix}${index}"
+    val devices = 1 to numeDevices
 
-    val measuresSource = Source.tick ( 0 seconds, 5 seconds, new Date () )
-      .map ( timestamp => Seq ( Measure ( clientId, "cpu.usage", timestamp, randomGenerator.nextDouble () * 100 ),
-                                Measure ( clientId, "mem.usage", timestamp, randomGenerator.nextDouble () * 100 ),
-                                Measure ( clientId, "disk.usage", timestamp, randomGenerator.nextDouble () * 100 ) ) )
-      .map ( measure => MqttMessage ( topic, ByteString ( jsonMapper.writer ().writeValueAsString ( measure ) ) ) )
+    // Generate random measures for every simulated device
+    devices.foreach ( index => {
 
-    val mqttSink = mqttSinkBuilder.buildMqttSink ( config, index )
+      val clientId = s"${clientIdPrefix}${index}"
 
-    // Run the flow
-    measuresSource.runWith ( mqttSink )
+      val measuresSource = Source.tick ( 0 seconds, 5 seconds, new Date () )
+        .map ( timestamp => Seq ( Measure ( clientId, "cpu.usage", timestamp, randomGenerator.nextDouble () * 100 ),
+          Measure ( clientId, "mem.usage", timestamp, randomGenerator.nextDouble () * 100 ),
+          Measure ( clientId, "disk.usage", timestamp, randomGenerator.nextDouble () * 100 ) ) )
+        .map ( measure => MqttMessage ( topic, ByteString ( jsonMapper.writer ().writeValueAsString ( measure ) ) ) )
 
-    logger.info ( s"Added simulated device clientId: $clientId" )
-  } )
+      val mqttSink = mqttSinkBuilder.buildMqttSink ( config, index )
 
-  logger.info ( "DeviceMetricsSimulator started" )
+      // Run the flow
+      measuresSource.runWith ( mqttSink )
+
+      logger.info ( s"Added simulated device clientId: $clientId" )
+    } )
+
+    logger.info ( "DeviceMetricsSimulator started" )
+  }
 }

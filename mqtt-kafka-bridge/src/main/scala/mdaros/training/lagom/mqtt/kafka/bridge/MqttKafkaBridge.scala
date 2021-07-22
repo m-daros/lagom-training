@@ -16,32 +16,36 @@ object MqttKafkaBridge extends App {
   val SERVICE_NAME     = "mqtt-kafka-bridge"
   val CONFIG_FILE_NAME = "application.conf"
 
-  implicit val actorSystem = ActorSystem ( SERVICE_NAME )
-  implicit val executionContext = ExecutionContext.Implicits.global
+  run ()
 
-  val mqttSourceBuilder = wire [ MqttSourceBuilder ]
-  val kafkaSinkBuilder  = wire [ KafkaSinkBuilder ]
+  def run (): Unit = {
 
-  val logger = Logging ( actorSystem, getClass )
+    implicit val actorSystem = ActorSystem ( SERVICE_NAME )
+    implicit val executionContext = ExecutionContext.Implicits.global
 
-  val mqttConfig  = ConfigFactory.load ( CONFIG_FILE_NAME )
-    .getConfig ( SERVICE_NAME )
-    .getConfig ( "mqtt-source" )
+    val mqttSourceBuilder = wire [ MqttSourceBuilder ]
+    val kafkaSinkBuilder  = wire [ KafkaSinkBuilder ]
 
-  val kafkaConfig = ConfigFactory.load ( CONFIG_FILE_NAME )
-    .getConfig ( SERVICE_NAME )
-    .getConfig ( "kafka-sink" )
+    val logger = Logging ( actorSystem, getClass )
 
-  val mqttSource = mqttSourceBuilder.buildSource ( mqttConfig )
-  val kafkaSink = kafkaSinkBuilder.buildSink ( kafkaConfig )
+    val mqttConfig  = ConfigFactory.load ( CONFIG_FILE_NAME )
+      .getConfig ( SERVICE_NAME )
+      .getConfig ( "mqtt-source" )
 
-  val kafdkaTopic = kafkaConfig.getString ( KAFKA_TOPIC.key )
+    val kafkaConfig = ConfigFactory.load ( CONFIG_FILE_NAME )
+      .getConfig ( SERVICE_NAME )
+      .getConfig ( "kafka-sink" )
 
-  // Start the flow
-  mqttSource
-    .map ( mqttMessage => mqttMessage.payload.utf8String )
-    .map ( value => new ProducerRecord [ String, String ] ( kafdkaTopic, value ) )
-    .runWith ( kafkaSink )
+    val mqttSource = mqttSourceBuilder.buildSource ( mqttConfig )
+    val kafkaSink = kafkaSinkBuilder.buildSink ( kafkaConfig )
 
-  logger.info ( "MQTT -> Kafka bridge started" )
+    val kafdkaTopic = kafkaConfig.getString ( KAFKA_TOPIC.key )
+
+    // Start the flow
+    mqttSource
+      .map ( mqttMessage => mqttMessage.payload.utf8String )
+      .map ( value => new ProducerRecord [ String, String ] ( kafdkaTopic, value ) )
+      .runWith ( kafkaSink )
+
+    logger.info ( "MQTT -> Kafka bridge started" )  }
 }
