@@ -12,7 +12,7 @@ import scala.concurrent.Future
 
 class MqttSinkBuilder {
 
-  def buildMqttSink ( config: Config, index: Int ): Sink [ MqttMessage, Future [ Done ] ] = {
+  def buildMqttSink ( index: Int, config: Config ): Sink [ MqttMessage, Any ] = {
 
     val mqttHost       = config.getString ( MQTT_BROKER_HOST.key )
     val mqttPort       = config.getInt ( MQTT_BROKER_PORT.key )

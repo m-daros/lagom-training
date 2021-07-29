@@ -2,33 +2,32 @@ package mdaros.training.lagom.devices.simulator
 
 import akka.actor.ActorSystem
 import akka.event.Logging
+import akka.stream.alpakka.mqtt.MqttMessage
+import akka.stream.scaladsl.{ Sink, Source }
 import com.softwaremill.macwire.wire
-import com.typesafe.config.ConfigFactory
 import mdaros.training.lagom.devices.simulator.config.ConfigurationKeys.{ CLIENT_ID_PREFIX, DEVICES_COUNT }
+import mdaros.training.lagom.devices.simulator.config.Configurator
+import mdaros.training.lagom.devices.simulator.config.Configurator._
 import mdaros.training.lagom.devices.simulator.devices.DeviceMeasureGenerator
 import mdaros.training.lagom.devices.simulator.sink.MqttSinkBuilder
 
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
-object DeviceMetricsSimulator extends App {
+class DeviceMetricsSimulator {
 
-  val SERVICE_NAME = "devices-metrics-simulator"
+  val deviceMeasureGenerator = wire [ DeviceMeasureGenerator ]
+  val mqttSinkBuilder        = wire [ MqttSinkBuilder ]
+  val configurator           = wire [ Configurator ]
 
-  run ()
+  implicit val actorSystem = ActorSystem ( SERVICE_NAME )
+  implicit val executionContext = ExecutionContext.Implicits.global
 
   def run (): Unit = {
 
-    implicit val actorSystem = ActorSystem ( SERVICE_NAME )
-    implicit val executionContext = ExecutionContext.Implicits.global
-
-    val deviceMeasureGenerator = wire [ DeviceMeasureGenerator ]
-    val mqttSinkBuilder        = wire [ MqttSinkBuilder ]
-
     val logger = Logging ( actorSystem, getClass )
 
-    val config = ConfigFactory.load ( "application.conf" )
-      .getConfig ( SERVICE_NAME )
+    val config = configurator.getConfig ()
 
     val numeDevices    = config.getInt ( DEVICES_COUNT.key )
     val clientIdPrefix = config.getString ( CLIENT_ID_PREFIX.key )
@@ -39,15 +38,20 @@ object DeviceMetricsSimulator extends App {
     devices.foreach ( index => {
 
       val clientId = s"${clientIdPrefix}${index}"
-      val measuresSource = deviceMeasureGenerator.generateMeasures ( index, config )
-      val mqttSink = mqttSinkBuilder.buildMqttSink ( config, index )
+      val measuresSource: Source [MqttMessage, Any] = deviceMeasureGenerator.generateMeasures ( index, config )
+      val mqttSink: Sink [MqttMessage, Any] = mqttSinkBuilder.buildMqttSink ( index, config )
 
       // Run the flow
-      measuresSource.runWith ( mqttSink )
+      runFlow ( measuresSource, mqttSink )
 
       logger.info ( s"Added simulated device clientId: $clientId" )
     } )
 
     logger.info ( "DeviceMetricsSimulator started" )
+  }
+
+  protected def runFlow ( measuresSource: Source [ MqttMessage, Any ], mqttSink: Sink [ MqttMessage, Any ] ): Any = {
+
+    measuresSource.runWith ( mqttSink )
   }
 }

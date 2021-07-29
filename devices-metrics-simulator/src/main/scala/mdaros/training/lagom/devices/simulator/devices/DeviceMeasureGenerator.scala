@@ -22,7 +22,7 @@ class DeviceMeasureGenerator {
 
   private val randomGenerator = new scala.util.Random
 
-  def generateMeasures ( index: Int, config: Config ): Source[MqttMessage, Cancellable] = {
+  def generateMeasures ( index: Int, config: Config ): Source [ MqttMessage, Any ] = {
 
     val topic          = config.getString ( TOPIC.key )
     val clientIdPrefix = config.getString ( CLIENT_ID_PREFIX.key )
@@ -31,8 +31,8 @@ class DeviceMeasureGenerator {
 
     Source.tick ( 0 seconds, 5 seconds, new Date () )
       .map ( timestamp => Seq ( Measure ( clientId, "cpu.usage", timestamp, randomGenerator.nextDouble () * 100 ),
-        Measure ( clientId, "mem.usage", timestamp, randomGenerator.nextDouble () * 100 ),
-        Measure ( clientId, "disk.usage", timestamp, randomGenerator.nextDouble () * 100 ) ) )
+                                Measure ( clientId, "mem.usage", timestamp, randomGenerator.nextDouble () * 100 ),
+                                Measure ( clientId, "disk.usage", timestamp, randomGenerator.nextDouble () * 100 ) ) )
       .map ( measure => MqttMessage ( topic, ByteString ( jsonMapper.writer ().writeValueAsString ( measure ) ) ) )
   }
 }
